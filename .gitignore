@@ -17,4 +17,4 @@ temp/*
 exports/*
 
 users/* 
-!users/default/
+!users/default
