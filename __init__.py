@@ -11,5 +11,4 @@ INFO = dict(title='Tavastland',
             sub_pages=[],
             user_page_class='PageUser')  # Must match name in ALL_PAGES in main app
 
-USER_SETTINGS = [('basic', 'tavastland'),
-                 ('basic', 'layout')]
+USER_SETTINGS = [('basic', 'tavastland')]

@@ -54,6 +54,7 @@ class PageTavastland(tk.Frame):
     def update_page(self):
         # TODO: Update when changing user
         self.user = self.user_manager.user
+        self._set_directories()
         
     #===========================================================================
     def _set_frame(self):
@@ -257,22 +258,31 @@ class PageTavastland(tk.Frame):
         return directory
 
     def _create_qc0_file(self):
-        self.main_app.update_help_information('Creating QC0 file...', bg='red')
-        manage = tavastland.ManageTavastlandFiles(self._get_qc_directory())
-        manage.create_qc0_file()
-        self.main_app.update_help_information('QC0 file created!', bg='green')
+        try:
+            self.main_app.update_help_information('Creating QC0 file...', bg='red')
+            manage = tavastland.ManageTavastlandFiles(self._get_qc_directory())
+            manage.create_qc0_file()
+            self.main_app.update_help_information('QC0 file created!', bg='green')
+        except Exception as e:
+            main_gui.show_internal_error(e)
 
     def _add_qc_columns(self):
-        self.main_app.update_help_information('Adding QC columns to file...', bg='red')
-        manage = tavastland.ManageTavastlandFiles(self._get_qc_directory())
-        manage.add_nodc_qc_columns()
-        self.main_app.update_help_information('QC columns added!', bg='green')
+        try:
+            self.main_app.update_help_information('Adding QC columns to file...', bg='red')
+            manage = tavastland.ManageTavastlandFiles(self._get_qc_directory())
+            manage.add_nodc_qc_columns()
+            self.main_app.update_help_information('QC columns added!', bg='green')
+        except Exception as e:
+            main_gui.show_internal_error(e)
 
     def _add_qc0_to_merge(self):
-        self.main_app.update_help_information('Adding QC0 information to merge file...', bg='red')
-        manage = tavastland.ManageTavastlandFiles(self._get_qc_directory())
-        manage.add_qc0_info_to_nodc_column_file()
-        self.main_app.update_help_information('QC0 information added to merge file!', bg='green')
+        try:
+            self.main_app.update_help_information('Adding QC0 information to merge file...', bg='red')
+            manage = tavastland.ManageTavastlandFiles(self._get_qc_directory())
+            manage.add_qc0_info_to_nodc_column_file()
+            self.main_app.update_help_information('QC0 information added to merge file!', bg='green')
+        except Exception as e:
+            main_gui.show_internal_error(e)
 
     def _toggle_use_time_span(self):
         selected = self.use_widget.get_value()
@@ -367,6 +377,11 @@ class PageTavastland(tk.Frame):
         except tavastland.TavastlandException as e:
             self.main_app.update_help_information('Merge failed!')
             main_gui.show_error('Could not merge data!', e.message)
+        except Exception as e:
+            main_gui.show_internal_error(e)
+        #     self.main_app.update_help_information('Merge failed!')
+        #     main_gui.show_error('Internal Error!', e)
+        #     raise
 
         else:
             self.main_app.update_help_information('Merge done!', bg='green')
@@ -374,38 +389,41 @@ class PageTavastland(tk.Frame):
             self._save_time_to_user()
 
     def _save_merge_data(self):
-        directory = self.directory_widget_save_merge.get_value()
 
-        if not directory:
-            main_gui.show_information('Missing input',
-                                      'Missing export directory. Export canceled!')
-            return
-
-        self.main_app.update_help_information('Exporting merge data. Please wait...', bg='red')
-        # Save data
-
-        deselected_types = self.handler.exclude_co2_types[:]
-        all_types = self.handler.get_types_in_merge_data()
-        selected_types = [''] + [t for t in all_types if t not in deselected_types]
         try:
+            directory = self.directory_widget_save_merge.get_value()
+
+            if not directory:
+                main_gui.show_information('Missing input',
+                                          'Missing export directory. Export canceled!')
+                return
+
+            self.main_app.update_help_information('Exporting merge data. Please wait...', bg='red')
+            # Save data
+
+            deselected_types = self.handler.exclude_co2_types[:]
+            all_types = self.handler.get_types_in_merge_data()
+            selected_types = [''] + [t for t in all_types if t not in deselected_types]
             try:
-                save_directory = self.handler.save_data(directory=directory, co2_types=selected_types)
-            except FileExistsError:
-                if not messagebox.askyesno('Save merge data',
-                                           'Merge data already exist. Do you want to overwrite files?'):
-                    return
-                save_directory = self.handler.save_data(directory=directory, co2_types=selected_types, overwrite=True)
+                try:
+                    save_directory = self.handler.save_data(directory=directory, co2_types=selected_types)
+                except FileExistsError:
+                    if not messagebox.askyesno('Save merge data',
+                                               'Merge data already exist. Do you want to overwrite files?'):
+                        return
+                    save_directory = self.handler.save_data(directory=directory, co2_types=selected_types, overwrite=True)
 
-            self.user.tavastland.set('deselected_types', deselected_types)
+                self.user.tavastland.set('deselected_types', deselected_types)
 
-            self.main_app.update_help_information('Export done!', bg='green')
+                self.main_app.update_help_information('Export done!', bg='green')
 
-            self.directory_widget_qc.set_value(self.handler.save_dir)
-        except PermissionError as e:
-            main_gui.show_error('PermissionError', e)
-        else:
-            main_gui.show_information('Export data', f'Merged data has been exported:\n{save_directory}')
-
+                self.directory_widget_qc.set_value(self.handler.save_dir)
+            except PermissionError as e:
+                main_gui.show_error('PermissionError', e)
+            else:
+                main_gui.show_information('Export data', f'Merged data has been exported:\n{save_directory}')
+        except Exception as e:
+            main_gui.show_internal_error(e)
 
     def _set_directories(self):
         mit_directory = self.user.tavastland.setdefault('mit_directory', self.default_import_directory)
@@ -436,50 +454,52 @@ class PageTavastland(tk.Frame):
         Create tavastland.FileHandler and loads import directories. Fills the table with information.
         :return:
         """
-
-        mit_directory = self.directory_widget_mit.get_directory()
-        co2_directory = self.directory_widget_co2.get_directory()
-        if not all([mit_directory, co2_directory, os.path.exists(mit_directory), os.path.exists(co2_directory)]):
-            main_gui.show_information('Invalid directories', 'Please check inport directories!')
-            return
-
-        self.main_app.update_help_information('Inspecting MIT and CO2 files. Please wait...', bg='red')
-
-        # Initiate handler
         try:
-            self.handler = tavastland.FileHandler(mit_directory=mit_directory,
-                                                  co2_directory=co2_directory,
-                                                  log_info=dict(name='gismo_gui'))
-        except tavastland.TavastlandException as e:
-            self.logger.debug('Tavastland error: {}'.format(e.message))
-            main_gui.show_information('Tavastland error', e.message)
-            self.main_app.update_help_information('Could not inspect files!')
-        else:
-            self.table_widget_mit.reset_table()
-            self.table_widget_co2.reset_table()
+            mit_directory = self.directory_widget_mit.get_directory()
+            co2_directory = self.directory_widget_co2.get_directory()
+            if not all([mit_directory, co2_directory, os.path.exists(mit_directory), os.path.exists(co2_directory)]):
+                main_gui.show_information('Invalid directories', 'Please check inport directories!')
+                return
 
-            # Update tables
-            mit_data, mit_error_data = self._get_table_data_from_df(self.handler.dfs['mit'], 'mit')
-            self.table_widget_mit.set_table(mit_data)
-            co2_data, co2_error_data = self._get_table_data_from_df(self.handler.dfs['co2'], 'co2')
-            self.table_widget_co2.set_table(co2_data)
-            self.main_app.update_help_information('MIT and/or CO2 files have been updated')
+            self.main_app.update_help_information('Inspecting MIT and CO2 files. Please wait...', bg='red')
 
-            error_data = mit_error_data + co2_error_data
-            self.table_widget_err.set_table(error_data)
+            # Initiate handler
+            try:
+                self.handler = tavastland.FileHandler(mit_directory=mit_directory,
+                                                      co2_directory=co2_directory,
+                                                      log_info=dict(name='gismo_gui'))
+            except tavastland.TavastlandException as e:
+                self.logger.debug('Tavastland error: {}'.format(e.message))
+                main_gui.show_information('Tavastland error', e.message)
+                self.main_app.update_help_information('Could not inspect files!')
+            else:
+                self.table_widget_mit.reset_table()
+                self.table_widget_co2.reset_table()
 
-            # Update time widgets
-            from_time, to_time = self.handler.get_min_and_max_time()
-            now = datetime.datetime.now()
-            if to_time > now:
-                to_time = now
-            self.time_widget_start.set_valid_time_span(from_time, to_time)
-            self.time_widget_end.set_valid_time_span(from_time, to_time)
-            main_gui.communicate.sync_user_and_time_widgets(user_sub_object=self.user.tavastland,
-                                                                        time_widget_start=self.time_widget_start,
-                                                                        time_widget_end=self.time_widget_end,
-                                                                        source='user')
-        self._toggle_use_time_span()
+                # Update tables
+                mit_data, mit_error_data = self._get_table_data_from_df(self.handler.dfs['mit'], 'mit')
+                self.table_widget_mit.set_table(mit_data)
+                co2_data, co2_error_data = self._get_table_data_from_df(self.handler.dfs['co2'], 'co2')
+                self.table_widget_co2.set_table(co2_data)
+                self.main_app.update_help_information('MIT and/or CO2 files have been updated')
+
+                error_data = mit_error_data + co2_error_data
+                self.table_widget_err.set_table(error_data)
+
+                # Update time widgets
+                from_time, to_time = self.handler.get_min_and_max_time()
+                now = datetime.datetime.now()
+                if to_time > now:
+                    to_time = now
+                self.time_widget_start.set_valid_time_span(from_time, to_time)
+                self.time_widget_end.set_valid_time_span(from_time, to_time)
+                main_gui.communicate.sync_user_and_time_widgets(user_sub_object=self.user.tavastland,
+                                                                            time_widget_start=self.time_widget_start,
+                                                                            time_widget_end=self.time_widget_end,
+                                                                            source='user')
+            self._toggle_use_time_span()
+        except Exception as e:
+            main_gui.show_internal_error(e)
 
     def _get_table_data_from_df(self, df, file_type):
         files_with_errors = set(self.handler.get_files_with_errors(file_type))

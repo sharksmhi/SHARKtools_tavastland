@@ -98,9 +98,6 @@ class App(PluginApp):
 
     def update_page(self):
         self.user = self.user_manager.user
-        plt.style.use(self.user.layout.setdefault('plotstyle', self.user.layout.setdefault('plotstyle',
-                                                                                            self.settings['default'][
-                                                                                            'plotstyle'])))
         self.update_all()
 
     #==========================================================================
