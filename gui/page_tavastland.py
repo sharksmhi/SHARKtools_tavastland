@@ -313,7 +313,10 @@ class PageTavastland(tk.Frame):
                 self.handler.load_data()
             except tavastland.TavastlandExceptionNoCO2data:
                 self.logger.debug('No CO2 data matches the given time!')
-                gui.show_information('No match', 'No CO2 data matches the given time!')
+                try:
+                    gui.show_information('No match', 'No CO2 data matches the given time!')
+                except:
+                    main_gui.show_information('No match', 'No CO2 data matches the given time!')
                 self.main_app.update_help_information('No co2 data found!')
                 return
 
@@ -341,8 +344,12 @@ class PageTavastland(tk.Frame):
     def _export_data(self):
         directory = self.directory_widget_export.get_value()
         if not directory:
-            gui.show_information('Missing input', 'Missing export directory. '
-                                                  'Export canceled!')
+            try:
+                gui.show_information('Missing input', 'Missing export directory. '
+                                                      'Export canceled!')
+            except:
+                main_gui.show_information('Missing input', 'Missing export directory. '
+                                                      'Export canceled!')
             return
 
         self.main_app.update_help_information('Exporting merge data. Please wait...', bg='red')
@@ -351,7 +358,10 @@ class PageTavastland(tk.Frame):
         all_types = self.type_widget.get_all_items()
         selected_types = [t for t in all_types if t not in deselected_types]
         try:
-            file_path = self.handler.save_merge_data(directory=directory, co2_types=selected_types)
+            # file_path = self.handler.save_merge_data(directory=directory, co2_types=selected_types)
+
+            # changed method name? why use protected? @Johannes
+            file_path = self.handler._save_merge_data(directory=directory, co2_types=selected_types)
 
             self.user.tavastland.set('deselected_types', deselected_types)
 
@@ -359,8 +369,9 @@ class PageTavastland(tk.Frame):
         except PermissionError as e:
             gui.show_error('PermissionError', e.message)
         else:
-            gui.show_information('Export data', 'Merged data has been exported:\n{}'.format(file_path))
-
+            # Changed to main_gui @Johannes  2020-04-29
+            main_gui.show_information('Export data', 'Merged data has been exported:\n{}'.format(file_path))
+            # gui.show_information('Export data', 'Merged data has been exported:\n{}'.format(file_path))
 
     def _set_directories(self):
         mit_directory = self.user.tavastland.setdefault('mit_directory', self.default_import_directory)
