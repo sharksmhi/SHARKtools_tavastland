@@ -10,6 +10,8 @@ from sharkpylib.ferrybox import tavastland
 import gui as main_gui
 from plugins.SHARKtools_tavastland import gui
 
+import re
+
 
 
 import plugins
@@ -52,6 +54,7 @@ class PageTavastland(tk.Frame):
     def update_page(self):
         # TODO: Update when changing user
         self.user = self.user_manager.user
+        self._set_directories()
         
     #===========================================================================
     def _set_frame(self):
@@ -68,21 +71,23 @@ class PageTavastland(tk.Frame):
         self.labelframe_options = tk.LabelFrame(self, text='Merge options')
         self.labelframe_options.grid(row=1, column=1, rowspan=2, **self.grid)
 
-        self.labelframe_merge_data = tk.LabelFrame(self, text='Merge data')
-        self.labelframe_merge_data.grid(row=1, column=2, **self.grid)
+        self.labelframe_merge = tk.LabelFrame(self, text='Merge')
+        self.labelframe_merge.grid(row=1, column=2, **self.grid)
 
-        self.labelframe_export = tk.LabelFrame(self, text='Export')
-        self.labelframe_export.grid(row=2, column=2, **self.grid)
+        self.labelframe_qc = tk.LabelFrame(self, text='QC files')
+        self.labelframe_qc.grid(row=2, column=2, **self.grid)
 
         tkw.grid_configure(self, nr_rows=3, nr_columns=3)
 
         self._set_frame_file_inspection()
         self._set_frame_source()
         self._set_frame_options()
-        self._set_frame_merge_data()
-        self._set_frame_export()
+        self._set_frame_merge()
+        self._set_frame_qc()
 
         self._set_directories()
+
+        self._enable_and_disable()
     
     def _set_frame_file_inspection(self):
         frame = self.labelframe_file_inspection
@@ -118,7 +123,7 @@ class PageTavastland(tk.Frame):
                                                                   callback=self._save_settings_to_user,
                                                                   row=1, column=0, **self.grid)
 
-        self.button_inspect_file = tk.Button(frame, text='Inspect files', command=self._inspect_files)
+        self.button_inspect_file = tk.Button(frame, text='Inspect files', command=self._inspect_files, bg='mediumseagreen')
         self.button_inspect_file.grid(row=2, column=0, **self.grid)
 
         tkw.grid_configure(frame, nr_rows=3)
@@ -169,63 +174,115 @@ class PageTavastland(tk.Frame):
                                                      row=5, column=1, sticky='w', padx=padx, pady=pady)
         self.time_widget_tolerance.set_value(self.user.tavastland.setdefault('t_delta', '30'))
 
-        # primary_file_type = self.user.tavastland.setdefault('primary_file_type', 'mit')
-        # self.primary_file_type_widget = tkw.ComboboxWidget(frame,
-        #                                                    title='Primary file type',
-        #                                                    items=['co2', 'mit'],
-        #                                                    default_item=primary_file_type,
-        #                                                    callback_target=self._save_settings_to_user,
-        #                                                    row=5,
-        #                                                    column=0,
-        #                                                    columnspan=2,
-        #                                                    sticky='nw')
         tkw.grid_configure(frame, nr_rows=6, nr_columns=2)
 
-    def _set_frame_merge_data(self):
-        frame = self.labelframe_merge_data
+    def _set_frame_merge(self):
+        frame = self.labelframe_merge
         r = 0
-
-        r+=1
-
-        # remove_areas_file = self.user.tavastland.setdefault('primary_file_type', 'co2')
-        # self.remove_areas_widget = tkw.ComboboxWidget(frame,
-        #                                                    title='Remove areas',
-        #                                                    items=['co2', 'mit'],
-        #                                                    default_item=primary_file_type,
-        #                                                    row=2,
-        #                                                    column=0,
-        #                                                    sticky='nw')
+        self.button_merge = tk.Button(frame, text='Merge data and calculate', command=self._merge_data, bg='mediumseagreen')
+        self.button_merge.grid(row=r, column=0, columnspan=2, **self.grid)
         r += 1
-
-        self.mask_area_file_widget = tkw.DirectoryWidgetLabelframe
-
-        self.button_merge = tk.Button(frame, text='Merge data and calculate', command=self._merge_data)
-        self.button_merge.grid(row=r, column=1, **self.grid)
-
-        r+=1
-        tkw.grid_configure(frame, nr_rows=r, nr_columns=1)
-
-    def _set_frame_export(self):
-        frame = self.labelframe_export
-
-        self.type_widget = tkw.ListboxSelectionWidget(frame, row=0, column=0, columnspan=2, sticky='nw',
-                                                      callback_set_default=self._set_default_row_selection)
-
-        self.directory_widget_export = tkw.DirectoryWidget(frame,
+        
+        tk.Label(frame, text='Export directory').grid(row=r, column=0, columnspan=2, sticky='nw')
+        r += 1
+        self.directory_widget_save_merge = tkw.DirectoryWidget(frame,
                                                            default_directory=self.default_export_directory,
                                                            callback=self._save_settings_to_user,
-                                                           row=1, column=0, sticky='nw')
+                                                           row=r, column=0, columnspan=2, sticky='nw')
+        r += 1
+        
+        self.stringvar_include_types = tk.StringVar()
+        tk.Label(frame, text='Include CO2 Types').grid(row=r, column=0, sticky='nw')
+        tk.Label(frame, textvariable=self.stringvar_include_types).grid(row=r, column=1, sticky='nw')
+        r += 1
+        
+        self.stringvar_exclude_types = tk.StringVar()
+        tk.Label(frame, text='Exclude CO2 Types').grid(row=r, column=0, sticky='nw')
+        tk.Label(frame, textvariable=self.stringvar_exclude_types).grid(row=r, column=1, sticky='nw')
+        r += 1
 
-        self.button_export = tk.Button(frame, text='Export data', command=self._export_data)
-        self.button_export.grid(row=2, column=1, **self.grid)
+        self.button_save_merge = tk.Button(frame, text='Save merge data', command=self._save_merge_data, bg='mediumseagreen')
+        self.button_save_merge.grid(row=r, column=0, columnspan=2, **self.grid)
 
-        tkw.grid_configure(frame, nr_rows=3, nr_columns=1)
+        tkw.grid_configure(frame, nr_rows=r+1, nr_columns=1)
 
-    def _set_default_row_selection(self):
-        self.type_widget.deselect_all()
-        default_value = self.parent_app.user_manager.get_default_user_settings('tavastland', 'deselected_types')
-        if default_value:
-            self.type_widget.move_items_to_selected(default_value)
+    def _set_frame_qc(self):
+        frame = self.labelframe_qc
+        r = 0
+        tk.Label(frame, text='Work with files in directory:').grid(row=r, column=0, columnspan=3, sticky='nw')
+        r += 1
+        self.directory_widget_qc = tkw.DirectoryWidget(frame,
+                                                       default_directory=self.default_export_directory,
+                                                       callback=self._enable_and_disable,
+                                                       prop_entry={'width': 100},
+                                                       row=r, column=0, columnspan=3, sticky='nw')
+        r += 1
+
+        self.button_create_qc0_file = tk.Button(frame, text='Create QC0 file', command=self._create_qc0_file,
+                                                bg='mediumseagreen')
+        self.button_create_qc0_file.grid(row=r, column=0, **self.grid)
+
+        self.button_add_qc_columns = tk.Button(frame, text='Add QC columns', command=self._add_qc_columns,
+                                               bg='mediumseagreen')
+        self.button_add_qc_columns.grid(row=r, column=1, **self.grid)
+
+        self.button_add_qc0_to_merge = tk.Button(frame, text='Add QC0 to merged file', command=self._add_qc0_to_merge,
+                                                 bg='mediumseagreen')
+        self.button_add_qc0_to_merge.grid(row=r, column=2, **self.grid)
+
+        tkw.grid_configure(frame, nr_rows=r+1, nr_columns=3)
+
+    def _enable_and_disable(self):
+        if not self.handler or not len(self.handler.current_merge_data):
+            tkw.disable_widgets(self.button_save_merge)
+        else:
+            tkw.enable_widgets(self.button_save_merge)
+
+        if not self.directory_widget_qc.get_directory():
+            tkw.disable_widgets(self.button_create_qc0_file)
+            tkw.disable_widgets(self.button_add_qc_columns)
+            tkw.disable_widgets(self.button_add_qc0_to_merge)
+        else:
+            tkw.enable_widgets(self.button_create_qc0_file)
+            tkw.enable_widgets(self.button_add_qc_columns)
+            tkw.enable_widgets(self.button_add_qc0_to_merge)
+
+    def _get_qc_directory(self):
+        directory = self.directory_widget_qc.get_directory()
+        if not re.findall('\d{14}_\d{14}', directory):
+            main_gui.show_information('Merge directory', f'{directory} is not a valid Tavastland merge directory')
+            return
+        if not os.listdir(directory):
+            main_gui.show_information('Merge directory', f'No files in Tavastland merge directory: {directory}')
+            return
+        return directory
+
+    def _create_qc0_file(self):
+        try:
+            self.main_app.update_help_information('Creating QC0 file...', bg='red')
+            manage = tavastland.ManageTavastlandFiles(self._get_qc_directory())
+            manage.create_qc0_file()
+            self.main_app.update_help_information('QC0 file created!', bg='green')
+        except Exception as e:
+            main_gui.show_internal_error(e)
+
+    def _add_qc_columns(self):
+        try:
+            self.main_app.update_help_information('Adding QC columns to file...', bg='red')
+            manage = tavastland.ManageTavastlandFiles(self._get_qc_directory())
+            manage.add_nodc_qc_columns()
+            self.main_app.update_help_information('QC columns added!', bg='green')
+        except Exception as e:
+            main_gui.show_internal_error(e)
+
+    def _add_qc0_to_merge(self):
+        try:
+            self.main_app.update_help_information('Adding QC0 information to merge file...', bg='red')
+            manage = tavastland.ManageTavastlandFiles(self._get_qc_directory())
+            manage.add_qc0_info_to_nodc_column_file()
+            self.main_app.update_help_information('QC0 information added to merge file!', bg='green')
+        except Exception as e:
+            main_gui.show_internal_error(e)
 
     def _toggle_use_time_span(self):
         selected = self.use_widget.get_value()
@@ -246,7 +303,6 @@ class PageTavastland(tk.Frame):
         :return:
         """
         try:
-            self.type_widget.update_items()
             source = self.use_widget.get_value()
             if 'time' in source:
                 time_start = self.time_widget_start.get_time_object()
@@ -254,10 +310,10 @@ class PageTavastland(tk.Frame):
                 # Have to add the day as well
                 time_end = time_end + datetime.timedelta(days=1) - datetime.timedelta(seconds=1)
 
-
                 if not all([time_start, time_end]):
-                    gui.show_information('Missing input', 'You have not made all required options to merge data. '
-                                                          'Merge canceled!')
+                    main_gui.show_information('Missing input',
+                                              'You have not made all required options to merge data. '
+                                              'Merge canceled!')
                     return
 
                 # Check time span
@@ -281,30 +337,13 @@ class PageTavastland(tk.Frame):
                 # Set time range to work with
                 self.handler.set_time_range(time_start=time_start, time_end=time_end)
 
-
-            # elif 'mit' in source:
-            #     selection = self.table_widget_mit.get_selected()
-            #     if not selection:
-            #         gui.show_information('No file selected', 'You have not selected any mit file to use for merge. '
-            #                                                  'Merge canceled!')
-            #         return
-            #     self.handler.set_time_range(file_id=selection['File name'], file_type='mit')
-            # elif 'co2' in source:
-            #     selection = self.table_widget_co2.get_selected()
-            #     if not selection:
-            #         gui.show_information('No file selected', 'You have not selected any co2 file to use for merge. '
-            #                                                  'Merge canceled!')
-            #         return
-            #     self.handler.set_time_range(file_id=selection['File name'], file_type='co2')
-
             time_delta_seconds = self.time_widget_tolerance.get_value()
             if not all([time_delta_seconds]):
-                gui.show_information('Missing input', 'You have not made all required options to merge data. '
+                main_gui.show_information('Missing input', 'You have not made all required options to merge data. '
                                                       'Merge canceled!')
                 return
 
             self.main_app.update_help_information('Merging data. Please wait...', bg='red')
-
 
             # Set timedelta
             self.handler.set_time_delta(seconds=int(time_delta_seconds))
@@ -325,17 +364,28 @@ class PageTavastland(tk.Frame):
             # Calculate pCO2
             self.handler.calculate_pCO2()
 
-            type_items = self.handler.get_types_in_merge_data()
-            deselected_types = self.user.tavastland.get('deselected_types')
-            self.type_widget.update_items(type_items)
-            self.type_widget.move_items_to_selected(deselected_types)
+            all_types = self.handler.get_types_in_merge_data()
+            exclude_types = self.handler.exclude_co2_types
+            include_types = [t for t in all_types if t not in exclude_types]
+
+            self.stringvar_exclude_types.set(exclude_types)
+            self.stringvar_include_types.set(include_types)
+
+            self._enable_and_disable()
+
+        except tavastland.TavastlandExceptionNoMatchWhenMerging as e:
+            self.main_app.update_help_information('No match between mit and co2 files!')
+            main_gui.show_error('No match!', e.message)
 
         except tavastland.TavastlandException as e:
             self.main_app.update_help_information('Merge failed!')
-            gui.show_error('Could not merge data!', e.message)
-        except tavastland.TavastlandExceptionNoMatchWhenMerging as e:
-            self.main_app.update_help_information('No match between mit and co2 files!')
-            gui.show_error('No match!', e.message)
+            main_gui.show_error('Could not merge data!', e.message)
+        except Exception as e:
+            main_gui.show_internal_error(e)
+        #     self.main_app.update_help_information('Merge failed!')
+        #     main_gui.show_error('Internal Error!', e)
+        #     raise
+
         else:
             self.main_app.update_help_information('Merge done!', bg='green')
         finally:
@@ -352,26 +402,44 @@ class PageTavastland(tk.Frame):
                                                       'Export canceled!')
             return
 
-        self.main_app.update_help_information('Exporting merge data. Please wait...', bg='red')
-        # Save data
-        deselected_types = self.type_widget.get_selected()
-        all_types = self.type_widget.get_all_items()
-        selected_types = [t for t in all_types if t not in deselected_types]
         try:
             # file_path = self.handler.save_merge_data(directory=directory, co2_types=selected_types)
 
-            # changed method name? why use protected? @Johannes
+            # changed method name? @Johannes
             file_path = self.handler._save_merge_data(directory=directory, co2_types=selected_types)
+            directory = self.directory_widget_save_merge.get_value()
 
-            self.user.tavastland.set('deselected_types', deselected_types)
+            if not directory:
+                main_gui.show_information('Missing input',
+                                          'Missing export directory. Export canceled!')
+                return
 
-            self.main_app.update_help_information('Export done!', bg='green')
-        except PermissionError as e:
-            gui.show_error('PermissionError', e.message)
-        else:
-            # Changed to main_gui @Johannes  2020-04-29
-            main_gui.show_information('Export data', 'Merged data has been exported:\n{}'.format(file_path))
-            # gui.show_information('Export data', 'Merged data has been exported:\n{}'.format(file_path))
+            self.main_app.update_help_information('Exporting merge data. Please wait...', bg='red')
+            # Save data
+
+            deselected_types = self.handler.exclude_co2_types[:]
+            all_types = self.handler.get_types_in_merge_data()
+            selected_types = [''] + [t for t in all_types if t not in deselected_types]
+            try:
+                try:
+                    save_directory = self.handler.save_data(directory=directory, co2_types=selected_types)
+                except FileExistsError:
+                    if not messagebox.askyesno('Save merge data',
+                                               'Merge data already exist. Do you want to overwrite files?'):
+                        return
+                    save_directory = self.handler.save_data(directory=directory, co2_types=selected_types, overwrite=True)
+
+                self.user.tavastland.set('deselected_types', deselected_types)
+
+                self.main_app.update_help_information('Export done!', bg='green')
+
+                self.directory_widget_qc.set_value(self.handler.save_dir)
+            except PermissionError as e:
+                main_gui.show_error('PermissionError', e)
+            else:
+                main_gui.show_information('Export data', f'Merged data has been exported:\n{save_directory}')
+        except Exception as e:
+            main_gui.show_internal_error(e)
 
     def _set_directories(self):
         mit_directory = self.user.tavastland.setdefault('mit_directory', self.default_import_directory)
@@ -381,10 +449,10 @@ class PageTavastland(tk.Frame):
         self.directory_widget_co2.set_directory(co2_directory, call_target=False)
 
         export_directory = self.user.tavastland.setdefault('export_directory', self.default_export_directory)
-        self.directory_widget_export.set_directory(export_directory, call_target=False)
+        self.directory_widget_save_merge.set_directory(export_directory, call_target=False)
 
     def _save_settings_to_user(self):
-        self.user.tavastland.set('export_directory', self.directory_widget_export.get_directory(), save=False)
+        self.user.tavastland.set('export_directory', self.directory_widget_save_merge.get_directory(), save=False)
         self.user.tavastland.set('mit_directory', self.directory_widget_mit.get_directory(), save=False)
         self.user.tavastland.set('co2_directory', self.directory_widget_co2.get_directory(), save=False)
         self.user.tavastland.set('selected_month', self.month_widget.get(), save=False)
@@ -402,50 +470,52 @@ class PageTavastland(tk.Frame):
         Create tavastland.FileHandler and loads import directories. Fills the table with information.
         :return:
         """
-
-        mit_directory = self.directory_widget_mit.get_directory()
-        co2_directory = self.directory_widget_co2.get_directory()
-        if not all([mit_directory, co2_directory, os.path.exists(mit_directory), os.path.exists(co2_directory)]):
-            gui.show_information('Invalid directories', 'Please check inport directories!')
-            return
-
-        self.main_app.update_help_information('Inspecting MIT and CO2 files. Please wait...', bg='red')
-
-        # Initiate handler
         try:
-            self.handler = tavastland.FileHandler(mit_directory=mit_directory,
-                                                  co2_directory=co2_directory,
-                                                  log_info=dict(name='gismo_gui'))
-        except tavastland.TavastlandException as e:
-            self.logger.debug('Tavastland error: {}'.format(e.message))
-            gui.show_information('Tavastland error', e.message)
-            self.main_app.update_help_information('Could not inspect files!')
-        else:
-            self.table_widget_mit.reset_table()
-            self.table_widget_co2.reset_table()
+            mit_directory = self.directory_widget_mit.get_directory()
+            co2_directory = self.directory_widget_co2.get_directory()
+            if not all([mit_directory, co2_directory, os.path.exists(mit_directory), os.path.exists(co2_directory)]):
+                main_gui.show_information('Invalid directories', 'Please check inport directories!')
+                return
 
-            # Update tables
-            mit_data, mit_error_data = self._get_table_data_from_df(self.handler.dfs['mit'], 'mit')
-            self.table_widget_mit.set_table(mit_data)
-            co2_data, co2_error_data = self._get_table_data_from_df(self.handler.dfs['co2'], 'co2')
-            self.table_widget_co2.set_table(co2_data)
-            self.main_app.update_help_information('MIT and/or CO2 files have been updated')
+            self.main_app.update_help_information('Inspecting MIT and CO2 files. Please wait...', bg='red')
 
-            error_data = mit_error_data + co2_error_data
-            self.table_widget_err.set_table(error_data)
+            # Initiate handler
+            try:
+                self.handler = tavastland.FileHandler(mit_directory=mit_directory,
+                                                      co2_directory=co2_directory,
+                                                      log_info=dict(name='gismo_gui'))
+            except tavastland.TavastlandException as e:
+                self.logger.debug('Tavastland error: {}'.format(e.message))
+                main_gui.show_information('Tavastland error', e.message)
+                self.main_app.update_help_information('Could not inspect files!')
+            else:
+                self.table_widget_mit.reset_table()
+                self.table_widget_co2.reset_table()
 
-            # Update time widgets
-            from_time, to_time = self.handler.get_min_and_max_time()
-            now = datetime.datetime.now()
-            if to_time > now:
-                to_time = now
-            self.time_widget_start.set_valid_time_span(from_time, to_time)
-            self.time_widget_end.set_valid_time_span(from_time, to_time)
-            main_gui.communicate.sync_user_and_time_widgets(user_sub_object=self.user.tavastland,
-                                                                        time_widget_start=self.time_widget_start,
-                                                                        time_widget_end=self.time_widget_end,
-                                                                        source='user')
-        self._toggle_use_time_span()
+                # Update tables
+                mit_data, mit_error_data = self._get_table_data_from_df(self.handler.dfs['mit'], 'mit')
+                self.table_widget_mit.set_table(mit_data)
+                co2_data, co2_error_data = self._get_table_data_from_df(self.handler.dfs['co2'], 'co2')
+                self.table_widget_co2.set_table(co2_data)
+                self.main_app.update_help_information('MIT and/or CO2 files have been updated')
+
+                error_data = mit_error_data + co2_error_data
+                self.table_widget_err.set_table(error_data)
+
+                # Update time widgets
+                from_time, to_time = self.handler.get_min_and_max_time()
+                now = datetime.datetime.now()
+                if to_time > now:
+                    to_time = now
+                self.time_widget_start.set_valid_time_span(from_time, to_time)
+                self.time_widget_end.set_valid_time_span(from_time, to_time)
+                main_gui.communicate.sync_user_and_time_widgets(user_sub_object=self.user.tavastland,
+                                                                            time_widget_start=self.time_widget_start,
+                                                                            time_widget_end=self.time_widget_end,
+                                                                            source='user')
+            self._toggle_use_time_span()
+        except Exception as e:
+            main_gui.show_internal_error(e)
 
     def _get_table_data_from_df(self, df, file_type):
         files_with_errors = set(self.handler.get_files_with_errors(file_type))

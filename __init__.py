@@ -8,9 +8,7 @@ from .app import App
 INFO = dict(title='Tavastland',
             users_directory='users',
             description='Plugin to handle CO2 merge of Tavastland data.',
-            sub_pages=[dict(name='PageTavastland',
-                            title='Start')],
+            sub_pages=[],
             user_page_class='PageUser')  # Must match name in ALL_PAGES in main app
 
-USER_SETTINGS = [('basic', 'tavastland'),
-                 ('basic', 'layout')]
+USER_SETTINGS = [('basic', 'tavastland')]
