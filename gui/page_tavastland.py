@@ -201,7 +201,7 @@ class PageTavastland(tk.Frame):
         tk.Label(frame, textvariable=self.stringvar_exclude_types).grid(row=r, column=1, sticky='nw')
         r += 1
 
-        self.button_save_merge = tk.Button(frame, text='Save merge data', command=self._save_merge_data, bg='mediumseagreen')
+        self.button_save_merge = tk.Button(frame, text='Save merge data', command=self._export_data, bg='mediumseagreen')
         self.button_save_merge.grid(row=r, column=0, columnspan=2, **self.grid)
 
         tkw.grid_configure(frame, nr_rows=r+1, nr_columns=1)
@@ -392,7 +392,7 @@ class PageTavastland(tk.Frame):
             self._save_time_to_user()
 
     def _export_data(self):
-        directory = self.directory_widget_export.get_value()
+        directory = self.directory_widget_save_merge.get_value()
         if not directory:
             try:
                 gui.show_information('Missing input', 'Missing export directory. '
@@ -406,8 +406,8 @@ class PageTavastland(tk.Frame):
             # file_path = self.handler.save_merge_data(directory=directory, co2_types=selected_types)
 
             # changed method name? @Johannes
-            file_path = self.handler._save_merge_data(directory=directory, co2_types=selected_types)
-            directory = self.directory_widget_save_merge.get_value()
+            # file_path = self.handler._save_merge_data(directory=directory, co2_types=selected_types)
+            # directory = self.directory_widget_save_merge.get_value()
 
             if not directory:
                 main_gui.show_information('Missing input',
